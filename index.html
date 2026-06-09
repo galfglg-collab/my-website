@@ -1,4 +1,4 @@
-<!OCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -31,7 +31,7 @@
             transition: 0.3s; font-size: 1em;
         }
         nav button.active { background: #e9c46a; color: #1a1a2e; border-color: #e9c46a; font-weight: bold; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
         .card {
             background: rgba(255,255,255,0.08); border-radius: 15px; overflow: hidden;
             backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
@@ -39,14 +39,26 @@
         }
         .card:hover { transform: translateY(-5px); }
         .card img, .card video, .card audio { width: 100%; height: 180px; object-fit: cover; background: #222; }
-        .card-body { padding: 15px; flex: 1; }
+        .card-body { padding: 15px; flex: 1; display: flex; flex-direction: column; }
         .card-body h3 { margin-bottom: 8px; font-size: 1.1em; color: #e9c46a; }
         .card-body p { font-size: 0.9em; color: #ccc; margin-bottom: 10px; }
         .download-btn {
             display: inline-block; background: #2a9d8f; color: white;
             padding: 6px 15px; border-radius: 20px; text-decoration: none; font-size: 0.9em; transition: 0.2s;
+            align-self: flex-start; margin-bottom: 10px;
         }
         .download-btn:hover { background: #21867a; }
+        /* 评论区 */
+        .comments-section { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 10px; }
+        .comments-list { max-height: 120px; overflow-y: auto; margin-bottom: 8px; font-size: 0.85em; }
+        .comment-item { margin-bottom: 6px; line-height: 1.4; }
+        .comment-author { color: #e9c46a; font-weight: bold; }
+        .comment-time { color: #888; font-size: 0.75em; margin-left: 8px; }
+        .comment-input-row { display: flex; gap: 6px; }
+        .comment-input-row input { flex: 1; padding: 6px 12px; border-radius: 15px; border: none; background: rgba(255,255,255,0.2); color: white; font-size: 0.85em; outline: none; }
+        .comment-input-row button { padding: 6px 12px; border-radius: 15px; border: none; background: #e9c46a; color: #1a1a2e; font-weight: bold; cursor: pointer; font-size: 0.85em; }
+        .comment-login-hint { color: #aaa; font-size: 0.8em; text-align: center; cursor: pointer; }
+        .comment-login-hint:hover { text-decoration: underline; }
         .admin-panel { background: rgba(0,0,0,0.7); border-radius: 20px; padding: 25px; margin: 20px 0; display: none; }
         .admin-panel.visible { display: block; }
         .admin-panel h2 { color: #e9c46a; margin-bottom: 20px; }
@@ -73,7 +85,6 @@
         <h1 id="siteTitle">我的个人网站</h1>
         <p style="text-align:center; color:#ccc;">个人作品集 · 分享平台</p>
     </header>
-
     <nav id="mainNav">
         <button class="active" data-cat="all">全部</button>
         <button data-cat="photo">📷 摄影</button>
@@ -83,14 +94,13 @@
         <button data-cat="model">🗿 建模</button>
         <button data-cat="game">🎮 游戏</button>
         <button data-cat="other">📦 其他</button>
+        <button data-cat="lottery">🎰 抽奖</button>
     </nav>
-
     <div style="text-align:right; margin-bottom:10px;">
         <span id="userStatus" style="margin-right:15px;"></span>
-        <button id="loginBtn" class="login-btn">🔐 管理员登录</button>
+        <button id="loginBtn" class="login-btn">🔐 登录 / 注册</button>
         <button id="logoutBtn" class="logout-btn" style="display:none;">退出</button>
     </div>
-
     <div class="admin-panel" id="adminPanel">
         <h2>📋 内容管理</h2>
         <div class="admin-row">
@@ -110,30 +120,48 @@
         <h3 style="margin-top:30px;">📬 待审核投稿</h3>
         <div id="pendingSubmissions">加载中...</div>
     </div>
-
+    <!-- 抽奖界面（默认隐藏） -->
+    <div id="lotteryPanel" style="display:none;">
+        <div style="background:rgba(0,0,0,0.4); border-radius:25px; padding:30px; max-width:500px; margin:0 auto; text-align:center;">
+            <h2 style="color:#e9c46a; margin-bottom:20px;">🎰 幸运抽奖</h2>
+            <div id="lotteryAdmin" style="display:none; margin-bottom:20px;">
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <input type="text" id="newPrizeName" placeholder="奖品名称" style="flex:1;">
+                    <button id="addPrizeBtn">➕ 添加</button>
+                </div>
+                <div style="display:flex; gap:10px; justify-content:center; margin:10px 0;">
+                    <button id="exportLotteryBtn" style="background:#2a9d8f;">📤 导出备份</button>
+                    <button id="importLotteryBtn" style="background:#3498db;">📥 导入恢复</button>
+                </div>
+                <div id="prizeListContainer" style="text-align:left; max-height:200px; overflow-y:auto; background:rgba(0,0,0,0.3); border-radius:10px; padding:10px; margin-top:10px;">
+                    <p style="color:#aaa;">奖品列表加载中...</p>
+                </div>
+            </div>
+            <p style="margin:15px 0; color:#ccc;">当前奖品数量：<strong id="prizeCount">0</strong></p>
+            <button id="drawBtn" style="font-size:1.4em; padding:15px 40px;">🎲 抽奖</button>
+            <div id="drawResult" style="margin-top:25px; font-size:2em; font-weight:bold; color:#e9c46a; min-height:60px;">✨ 试试手气</div>
+        </div>
+    </div>
     <div class="grid" id="contentGrid">加载中...</div>
-
     <div style="text-align:center; margin:40px 0;">
         <button id="submitBtn" style="font-size:1.2em; padding:12px 30px;">✉️ 向我投稿</button>
     </div>
 </div>
 </div>
-
 <!-- 登录弹窗 -->
 <div id="loginModal" style="display:none; position:fixed; top:0;left:0;width:100%;height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:1000;">
     <div style="background:#222; padding:30px; border-radius:20px; text-align:center; max-width:350px; width:90%;">
-        <h2>管理员登录</h2>
+        <h2>登录 / 注册</h2>
         <input type="email" id="loginEmail" placeholder="邮箱" style="display:block; width:100%; margin:10px 0;">
         <input type="password" id="loginPass" placeholder="密码" style="display:block; width:100%; margin:10px 0;">
-        <button onclick="login()">登录</button>
-        <button onclick="closeLogin()" style="background:#555;">取消</button>
+        <button onclick="login()" style="margin:5px;">登录</button>
+        <button onclick="register()" style="background:#2a9d8f; margin:5px;">注册新账号</button>
+        <button onclick="closeLogin()" style="background:#555; margin:5px;">取消</button>
     </div>
 </div>
-
 <script>
-// ======================== 🔧 配置区（请修改为你的信息） ========================
+// ======================== 🔧 配置区 ========================
 const firebaseConfig = {
-    // 粘贴你的 Firebase 配置对象（从 Firebase 控制台复制的）
     apiKey: "AIzaSyAmSG0NPhfZ2YFKgaD4wR9nmCirZnVgxo0",
     authDomain: "share-wldcage.firebaseapp.com",
     databaseURL: "https://share-wldcage-default-rtdb.firebaseio.com",
@@ -141,30 +169,24 @@ const firebaseConfig = {
     storageBucket: "share-wldcage.firebasestorage.app",
     messagingSenderId: "270984368043",
     appId: "1:270984368043:web:3253e1283f8bd1ae974cee",
-  measurementId: "G-7VSMRGF7T5"
+    measurementId: "G-7VSMRGF7T5"
 };
-
-const CLOUDINARY_CLOUD_NAME = "df8gjalig";   // 替换成你的 Cloudinary Cloud Name
-const CLOUDINARY_UPLOAD_PRESET = "my_website";   // 你创建的 preset 名称
-
-const SITE_TITLE = "WLDcage个人网站";    // 你的网站标题
-const BG_IMAGE_URL = "";              // 自定义背景图地址，留空则用默认深蓝背景
-// =============================================================================
-
+const CLOUDINARY_CLOUD_NAME = "df8gjalig";
+const CLOUDINARY_UPLOAD_PRESET = "my_website";
+const SITE_TITLE = "WLDcage个人网站";
+const BG_IMAGE_URL = "";
+// ==========================================================
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
-
 if (BG_IMAGE_URL) {
     document.body.style.backgroundImage = `url('${BG_IMAGE_URL}')`;
 }
 document.getElementById('siteTitle').textContent = SITE_TITLE;
 document.title = SITE_TITLE;
-
 let currentUser = null;
 let isAdmin = false;
 let currentFilter = 'all';
-
 // 用户状态监听
 auth.onAuthStateChanged(user => {
     currentUser = user;
@@ -180,6 +202,14 @@ auth.onAuthStateChanged(user => {
             } else {
                 document.getElementById('adminPanel').classList.remove('visible');
             }
+            // 更新抽奖管理区显示
+            const lotteryAdminDiv = document.getElementById('lotteryAdmin');
+            if (lotteryAdminDiv) {
+                lotteryAdminDiv.style.display = isAdmin ? 'block' : 'none';
+            }
+            if (currentFilter === 'lottery') {
+                initLottery();
+            }
         });
     } else {
         document.getElementById('userStatus').textContent = '';
@@ -187,10 +217,11 @@ auth.onAuthStateChanged(user => {
         document.getElementById('logoutBtn').style.display = 'none';
         document.getElementById('adminPanel').classList.remove('visible');
         isAdmin = false;
+        const lotteryAdminDiv = document.getElementById('lotteryAdmin');
+        if (lotteryAdminDiv) lotteryAdminDiv.style.display = 'none';
     }
 });
-
-// 登录/登出逻辑
+// 登录/注册
 document.getElementById('loginBtn').addEventListener('click', () => {
     document.getElementById('loginModal').style.display = 'flex';
 });
@@ -202,18 +233,34 @@ function login() {
         .then(() => { document.getElementById('loginModal').style.display = 'none'; })
         .catch(e => alert('登录失败: ' + e.message));
 }
+function register() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    auth.createUserWithEmailAndPassword(email, pass)
+        .then(() => {
+            alert('注册成功，已自动登录！');
+            document.getElementById('loginModal').style.display = 'none';
+        })
+        .catch(e => alert('注册失败: ' + e.message));
+}
 function closeLogin() { document.getElementById('loginModal').style.display = 'none'; }
-
 // 分类筛选
 document.querySelectorAll('#mainNav button').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('#mainNav button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentFilter = btn.dataset.cat;
-        loadPublicItems();
+        if (currentFilter === 'lottery') {
+            document.getElementById('lotteryPanel').style.display = 'block';
+            document.getElementById('contentGrid').style.display = 'none';
+            initLottery();
+        } else {
+            document.getElementById('lotteryPanel').style.display = 'none';
+            document.getElementById('contentGrid').style.display = '';
+            loadPublicItems();
+        }
     });
 });
-
 // 加载公开作品
 function loadPublicItems() {
     const grid = document.getElementById('contentGrid');
@@ -224,13 +271,18 @@ function loadPublicItems() {
         for (let id in items) {
             const item = items[id];
             if (currentFilter !== 'all' && item.category !== currentFilter) continue;
-            html += createCard(item);
+            html += createCard(item, id);
         }
         grid.innerHTML = html || '<p style="grid-column:1/-1; text-align:center; color:#aaa;">暂无内容</p>';
+        // 为每个作品加载评论
+        for (let id in items) {
+            const item = items[id];
+            if (currentFilter !== 'all' && item.category !== currentFilter) continue;
+            loadCommentsForItem(id);
+        }
     });
 }
-
-function createCard(item) {
+function createCard(item, itemId) {
     let mediaHtml = '';
     if (item.fileType && item.fileType.startsWith('image/')) {
         mediaHtml = `<img src="${item.fileUrl}" alt="${item.title}" loading="lazy">`;
@@ -242,22 +294,75 @@ function createCard(item) {
         mediaHtml = `<div style="height:180px; display:flex; align-items:center; justify-content:center; background:#333;">📁 ${item.fileName || '文件'}</div>`;
     }
     return `
-    <div class="card">
+    <div class="card" data-item-id="${itemId}">
         ${mediaHtml}
         <div class="card-body">
             <h3>${escapeHtml(item.title)}</h3>
             <p>${escapeHtml(item.desc || '')}</p>
             <a class="download-btn" href="${item.fileUrl}" target="_blank" download>下载</a>
+            <div class="comments-section" id="comments-${itemId}">
+                <div class="comments-list" id="comments-list-${itemId}">加载评论...</div>
+                <div class="comment-input-row" id="comment-input-row-${itemId}">
+                    <input type="text" placeholder="写下你的评论..." id="comment-input-${itemId}" style="flex:1;">
+                    <button id="comment-submit-${itemId}">发送</button>
+                </div>
+                <div class="comment-login-hint" id="comment-login-hint-${itemId}" style="display:none;">请先登录才能评论</div>
+            </div>
         </div>
     </div>`;
 }
-
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
-
+// 评论功能
+function loadCommentsForItem(itemId) {
+    const listDiv = document.getElementById('comments-list-' + itemId);
+    if (!listDiv) return;
+    db.ref('comments/' + itemId).limitToLast(20).on('value', snap => {
+        const comments = snap.val() || {};
+        let html = '';
+        const sorted = Object.entries(comments).sort((a,b) => (a[1].timestamp || 0) - (b[1].timestamp || 0));
+        for (let [cid, comment] of sorted) {
+            const timeStr = comment.timestamp ? new Date(comment.timestamp).toLocaleString() : '';
+            html += `<div class="comment-item">
+                <span class="comment-author">${escapeHtml(comment.email || '匿名')}</span>
+                <span class="comment-time">${timeStr}</span>
+                <span>${escapeHtml(comment.text)}</span>
+            </div>`;
+        }
+        listDiv.innerHTML = html || '<div style="color:#aaa;">暂无评论</div>';
+    });
+    // 绑定提交按钮事件（只绑定一次）
+    const submitBtn = document.getElementById('comment-submit-' + itemId);
+    if (submitBtn) {
+        submitBtn.onclick = function() {
+            if (!currentUser) {
+                document.getElementById('comment-login-hint-' + itemId).style.display = 'block';
+                document.getElementById('loginModal').style.display = 'flex';
+                return;
+            }
+            const input = document.getElementById('comment-input-' + itemId);
+            const text = input.value.trim();
+            if (!text) return;
+            const commentData = {
+                uid: currentUser.uid,
+                email: currentUser.email,
+                text: text,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+            db.ref('comments/' + itemId).push(commentData).then(() => {
+                input.value = '';
+            }).catch(err => alert('评论失败: ' + err.message));
+        };
+    }
+    // 更新登录提示显示状态
+    const hint = document.getElementById('comment-login-hint-' + itemId);
+    if (hint) {
+        hint.style.display = currentUser ? 'none' : 'block';
+    }
+}
 // Cloudinary 上传窗口
 function openCloudinaryWidget(callback) {
     cloudinary.openUploadWidget({
@@ -265,7 +370,7 @@ function openCloudinaryWidget(callback) {
         uploadPreset: CLOUDINARY_UPLOAD_PRESET,
         sources: ['local', 'url', 'camera'],
         multiple: false,
-        maxFileSize: 100000000  // 100MB
+        maxFileSize: 100000000
     }, (error, result) => {
         if (!error && result && result.event === 'success') {
             const info = result.info;
@@ -279,7 +384,6 @@ function openCloudinaryWidget(callback) {
         }
     });
 }
-
 // 管理员上传
 document.getElementById('adminUploadBtn').addEventListener('click', () => {
     if (!isAdmin) return alert('仅管理员可操作');
@@ -287,7 +391,6 @@ document.getElementById('adminUploadBtn').addEventListener('click', () => {
     const title = document.getElementById('uploadTitle').value.trim();
     const desc = document.getElementById('uploadDesc').value.trim();
     if (!title) return alert('请填写标题');
-
     openCloudinaryWidget((fileInfo) => {
         const newItem = {
             title, desc, category: cat,
@@ -304,19 +407,17 @@ document.getElementById('adminUploadBtn').addEventListener('click', () => {
         }).catch(err => alert('保存失败: ' + err.message));
     });
 });
-
 // 访客投稿
 document.getElementById('submitBtn').addEventListener('click', () => {
     if (!currentUser) {
-        alert('请先登录（可使用任意邮箱注册，或请管理员为你创建账号）');
+        alert('请先登录（可使用任意邮箱注册）');
         document.getElementById('loginModal').style.display = 'flex';
         return;
     }
     const title = prompt('作品标题');
     if (!title) return;
     const desc = prompt('简短描述（可选）') || '';
-    const cat = prompt('分类（photo / illustration / music / program / model / game / other）') || 'other';
-
+    const cat = prompt('分类（photo/illustration/music/program/model/game/other）') || 'other';
     openCloudinaryWidget((fileInfo) => {
         const submission = {
             uid: currentUser.uid,
@@ -329,12 +430,11 @@ document.getElementById('submitBtn').addEventListener('click', () => {
             timestamp: firebase.database.ServerValue.TIMESTAMP
         };
         db.ref('submissions/' + currentUser.uid).push(submission).then(() => {
-            alert('投稿成功，等待管理员审核！');
+            alert('投稿成功，等待审核！');
         }).catch(err => alert('提交失败: ' + err.message));
     });
 });
-
-// 加载待审核投稿（仅管理员可见）
+// 待审核加载
 function loadPendingSubmissions() {
     if (!isAdmin) return;
     db.ref('submissions').once('value').then(snap => {
@@ -356,37 +456,112 @@ function loadPendingSubmissions() {
         document.getElementById('pendingSubmissions').innerHTML = html || '暂无待审核';
     });
 }
-
 async function approve(uid, subId) {
     try {
         const subSnap = await db.ref('submissions/' + uid + '/' + subId).once('value');
         const sub = subSnap.val();
         if (!sub) return;
         await db.ref('items').push({
-            title: sub.title,
-            desc: sub.desc,
-            category: sub.category,
-            fileUrl: sub.fileUrl,
-            fileType: sub.fileType,
-            fileName: sub.fileName,
+            title: sub.title, desc: sub.desc, category: sub.category,
+            fileUrl: sub.fileUrl, fileType: sub.fileType, fileName: sub.fileName,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         });
         await db.ref('submissions/' + uid + '/' + subId + '/status').set('approved');
         alert('已通过并发布');
         loadPendingSubmissions();
         loadPublicItems();
-    } catch (e) {
-        alert('操作失败: ' + e.message);
-    }
+    } catch (e) { alert('操作失败: ' + e.message); }
 }
-
 async function reject(uid, subId) {
-    if (confirm('确定拒绝该投稿吗？')) {
+    if (confirm('确定拒绝？')) {
         await db.ref('submissions/' + uid + '/' + subId + '/status').set('rejected');
         loadPendingSubmissions();
     }
 }
-
+// ==================== 抽奖功能 ====================
+let lotteryPrizes = [];
+function initLottery() {
+    db.ref('lottery/prizes').once('value').then(snap => {
+        lotteryPrizes = snap.val() || [];
+        renderPrizeList();
+        document.getElementById('prizeCount').textContent = lotteryPrizes.length;
+    });
+}
+function renderPrizeList() {
+    const container = document.getElementById('prizeListContainer');
+    if (!isAdmin) {
+        container.innerHTML = '<p style="color:#aaa;">仅管理员可查看奖品列表</p>';
+        return;
+    }
+    if (lotteryPrizes.length === 0) {
+        container.innerHTML = '<p style="color:#aaa;">暂无奖品，请添加</p>';
+        return;
+    }
+    let html = '<ul style="list-style:none; padding:0;">';
+    lotteryPrizes.forEach((prize, index) => {
+        html += `<li style="display:flex; justify-content:space-between; align-items:center; padding:8px 15px; background:rgba(255,255,255,0.1); margin:5px 0; border-radius:20px;">
+            <span>${escapeHtml(prize)}</span>
+            <button class="delete-prize-btn" data-index="${index}" style="background:rgba(255,80,80,0.5); border:none; color:white; width:24px; height:24px; border-radius:50%; cursor:pointer; font-size:14px; line-height:24px; text-align:center;">×</button>
+        </li>`;
+    });
+    html += '</ul>';
+    container.innerHTML = html;
+    container.querySelectorAll('.delete-prize-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const idx = e.target.getAttribute('data-index');
+            if (confirm(`确定删除奖品“${lotteryPrizes[idx]}”吗？`)) {
+                lotteryPrizes.splice(idx, 1);
+                saveLotteryToDB();
+            }
+        });
+    });
+}
+function saveLotteryToDB() {
+    db.ref('lottery/prizes').set(lotteryPrizes).then(() => {
+        renderPrizeList();
+        document.getElementById('prizeCount').textContent = lotteryPrizes.length;
+    }).catch(err => alert('保存失败: ' + err.message));
+}
+document.getElementById('addPrizeBtn').addEventListener('click', () => {
+    if (!isAdmin) return;
+    const nameInput = document.getElementById('newPrizeName');
+    const name = nameInput.value.trim();
+    if (!name) return alert('请输入奖品名称');
+    lotteryPrizes.push(name);
+    nameInput.value = '';
+    saveLotteryToDB();
+});
+document.getElementById('drawBtn').addEventListener('click', () => {
+    if (lotteryPrizes.length === 0) {
+        document.getElementById('drawResult').innerHTML = '⚠️ 奖品池为空';
+        return;
+    }
+    const randomIndex = Math.floor(Math.random() * lotteryPrizes.length);
+    const winner = lotteryPrizes[randomIndex];
+    document.getElementById('drawResult').innerHTML = `🏆 ${escapeHtml(winner)} 🏆`;
+});
+document.getElementById('exportLotteryBtn').addEventListener('click', () => {
+    if (!isAdmin) return;
+    const code = btoa(unescape(encodeURIComponent(JSON.stringify(lotteryPrizes))));
+    prompt('请复制以下备份码（可在其他设备导入）', code);
+});
+document.getElementById('importLotteryBtn').addEventListener('click', () => {
+    if (!isAdmin) return;
+    const code = prompt('请粘贴备份码');
+    if (!code) return;
+    try {
+        const decoded = decodeURIComponent(escape(atob(code.trim())));
+        const newPrizes = JSON.parse(decoded);
+        if (!Array.isArray(newPrizes)) throw new Error('格式错误');
+        if (confirm(`即将导入 ${newPrizes.length} 个奖品，覆盖当前奖池，确定吗？`)) {
+            lotteryPrizes = newPrizes;
+            saveLotteryToDB();
+            alert('导入成功！');
+        }
+    } catch (e) {
+        alert('备份码无效，请检查是否完整复制');
+    }
+});
 // 初始化
 loadPublicItems();
 </script>
