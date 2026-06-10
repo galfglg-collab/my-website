@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的个人网站</title>
+    <title>WLDcage个人网站</title>
     <!-- Firebase SDK (Auth + Database) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
@@ -36,6 +36,7 @@
             background: rgba(255,255,255,0.08); border-radius: 15px; overflow: hidden;
             backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
             transition: transform 0.2s; display: flex; flex-direction: column;
+            cursor: pointer;
         }
         .card:hover { transform: translateY(-5px); }
         .card img, .card video, .card audio { width: 100%; height: 180px; object-fit: cover; background: #222; }
@@ -59,6 +60,7 @@
         .comment-input-row button { padding: 6px 12px; border-radius: 15px; border: none; background: #e9c46a; color: #1a1a2e; font-weight: bold; cursor: pointer; font-size: 0.85em; }
         .comment-login-hint { color: #aaa; font-size: 0.8em; text-align: center; cursor: pointer; }
         .comment-login-hint:hover { text-decoration: underline; }
+
         .admin-panel { background: rgba(0,0,0,0.7); border-radius: 20px; padding: 25px; margin: 20px 0; display: none; }
         .admin-panel.visible { display: block; }
         .admin-panel h2 { color: #e9c46a; margin-bottom: 20px; }
@@ -76,13 +78,29 @@
         .login-btn { background: #2a9d8f; }
         .logout-btn { background: #e76f51; }
         .note { color: #aaa; font-size: 0.85em; margin: 5px 0; }
+
+        /* 全屏灯箱 */
+        .lightbox {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 2000; justify-content: center; align-items: center;
+        }
+        .lightbox.active { display: flex; }
+        .lightbox .close {
+            position: absolute; top: 20px; right: 30px;
+            font-size: 2.5em; color: white; cursor: pointer; z-index: 10;
+        }
+        .lightbox img, .lightbox video {
+            max-width: 90%; max-height: 80%; border-radius: 10px;
+        }
+        #publishedItemsList { max-height: 300px; overflow-y: auto; margin-top: 10px; }
+        #publishedItemsList div { display: flex; justify-content: space-between; padding: 8px 15px; margin: 5px 0; background: rgba(255,255,255,0.1); border-radius: 20px; }
     </style>
 </head>
 <body>
 <div class="overlay">
 <div class="container">
     <header>
-        <h1 id="siteTitle">我的个人网站</h1>
+        <h1 id="siteTitle">WLDcage个人网站</h1>
         <p style="text-align:center; color:#ccc;">个人作品集 · 分享平台</p>
     </header>
     <nav id="mainNav">
@@ -90,17 +108,20 @@
         <button data-cat="photo">📷 摄影</button>
         <button data-cat="illustration">🎨 插画</button>
         <button data-cat="music">🎵 音乐</button>
+        <button data-cat="video">🎬 视频</button>
         <button data-cat="program">💻 程序</button>
         <button data-cat="model">🗿 建模</button>
         <button data-cat="game">🎮 游戏</button>
         <button data-cat="other">📦 其他</button>
         <button data-cat="lottery">🎰 抽奖</button>
     </nav>
+
     <div style="text-align:right; margin-bottom:10px;">
         <span id="userStatus" style="margin-right:15px;"></span>
         <button id="loginBtn" class="login-btn">🔐 登录 / 注册</button>
         <button id="logoutBtn" class="logout-btn" style="display:none;">退出</button>
     </div>
+
     <div class="admin-panel" id="adminPanel">
         <h2>📋 内容管理</h2>
         <div class="admin-row">
@@ -108,6 +129,7 @@
                 <option value="photo">摄影</option>
                 <option value="illustration">插画</option>
                 <option value="music">音乐</option>
+                <option value="video">视频</option>
                 <option value="program">程序</option>
                 <option value="model">建模</option>
                 <option value="game">游戏</option>
@@ -117,10 +139,15 @@
             <input type="text" id="uploadDesc" placeholder="简短描述">
             <button id="adminUploadBtn">⬆️ 上传作品</button>
         </div>
+
         <h3 style="margin-top:30px;">📬 待审核投稿</h3>
         <div id="pendingSubmissions">加载中...</div>
+
+        <h3 style="margin-top:30px;">📂 已发布作品管理</h3>
+        <div id="publishedItemsList">加载中...</div>
     </div>
-    <!-- 抽奖界面（默认隐藏） -->
+
+    <!-- 抽奖界面 -->
     <div id="lotteryPanel" style="display:none;">
         <div style="background:rgba(0,0,0,0.4); border-radius:25px; padding:30px; max-width:500px; margin:0 auto; text-align:center;">
             <h2 style="color:#e9c46a; margin-bottom:20px;">🎰 幸运抽奖</h2>
@@ -142,12 +169,15 @@
             <div id="drawResult" style="margin-top:25px; font-size:2em; font-weight:bold; color:#e9c46a; min-height:60px;">✨ 试试手气</div>
         </div>
     </div>
+
     <div class="grid" id="contentGrid">加载中...</div>
+
     <div style="text-align:center; margin:40px 0;">
         <button id="submitBtn" style="font-size:1.2em; padding:12px 30px;">✉️ 向我投稿</button>
     </div>
 </div>
 </div>
+
 <!-- 登录弹窗 -->
 <div id="loginModal" style="display:none; position:fixed; top:0;left:0;width:100%;height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:1000;">
     <div style="background:#222; padding:30px; border-radius:20px; text-align:center; max-width:350px; width:90%;">
@@ -159,8 +189,15 @@
         <button onclick="closeLogin()" style="background:#555; margin:5px;">取消</button>
     </div>
 </div>
+
+<!-- 全屏灯箱 -->
+<div class="lightbox" id="lightbox">
+    <span class="close" id="closeLightbox">&times;</span>
+    <div id="lightboxContent"></div>
+</div>
+
 <script>
-// ======================== 🔧 配置区 ========================
+// ======================== 🔧 配置区（已替换为你自己的信息） ========================
 const firebaseConfig = {
     apiKey: "AIzaSyAmSG0NPhfZ2YFKgaD4wR9nmCirZnVgxo0",
     authDomain: "share-wldcage.firebaseapp.com",
@@ -171,22 +208,28 @@ const firebaseConfig = {
     appId: "1:270984368043:web:3253e1283f8bd1ae974cee",
     measurementId: "G-7VSMRGF7T5"
 };
+
 const CLOUDINARY_CLOUD_NAME = "df8gjalig";
 const CLOUDINARY_UPLOAD_PRESET = "my_website";
+
 const SITE_TITLE = "WLDcage个人网站";
-const BG_IMAGE_URL = "https://res.cloudinary.com/df8gjalig/image/upload/v1781039887/微信图片_20260610045647_629_166_xru49k.jpg";
+const BG_IMAGE_URL = "";  // 你之前填的背景图链接在这里
 // ==========================================================
+
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
+
 if (BG_IMAGE_URL) {
     document.body.style.backgroundImage = `url('${BG_IMAGE_URL}')`;
 }
 document.getElementById('siteTitle').textContent = SITE_TITLE;
 document.title = SITE_TITLE;
+
 let currentUser = null;
 let isAdmin = false;
 let currentFilter = 'all';
+
 // 用户状态监听
 auth.onAuthStateChanged(user => {
     currentUser = user;
@@ -199,10 +242,10 @@ auth.onAuthStateChanged(user => {
             if (isAdmin) {
                 document.getElementById('adminPanel').classList.add('visible');
                 loadPendingSubmissions();
+                loadPublishedItems();
             } else {
                 document.getElementById('adminPanel').classList.remove('visible');
             }
-            // 更新抽奖管理区显示
             const lotteryAdminDiv = document.getElementById('lotteryAdmin');
             if (lotteryAdminDiv) {
                 lotteryAdminDiv.style.display = isAdmin ? 'block' : 'none';
@@ -221,6 +264,7 @@ auth.onAuthStateChanged(user => {
         if (lotteryAdminDiv) lotteryAdminDiv.style.display = 'none';
     }
 });
+
 // 登录/注册
 document.getElementById('loginBtn').addEventListener('click', () => {
     document.getElementById('loginModal').style.display = 'flex';
@@ -244,6 +288,7 @@ function register() {
         .catch(e => alert('注册失败: ' + e.message));
 }
 function closeLogin() { document.getElementById('loginModal').style.display = 'none'; }
+
 // 分类筛选
 document.querySelectorAll('#mainNav button').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -261,6 +306,7 @@ document.querySelectorAll('#mainNav button').forEach(btn => {
         }
     });
 });
+
 // 加载公开作品
 function loadPublicItems() {
     const grid = document.getElementById('contentGrid');
@@ -274,22 +320,29 @@ function loadPublicItems() {
             html += createCard(item, id);
         }
         grid.innerHTML = html || '<p style="grid-column:1/-1; text-align:center; color:#aaa;">暂无内容</p>';
-        // 为每个作品加载评论
         for (let id in items) {
             const item = items[id];
             if (currentFilter !== 'all' && item.category !== currentFilter) continue;
             loadCommentsForItem(id);
+            const card = document.querySelector(`[data-item-id="${id}"]`);
+            if (card) {
+                card.addEventListener('click', (e) => {
+                    if (e.target.closest('.download-btn') || e.target.closest('.comments-section') || e.target.closest('button')) return;
+                    openLightbox(item);
+                });
+            }
         }
     });
 }
+
 function createCard(item, itemId) {
     let mediaHtml = '';
     if (item.fileType && item.fileType.startsWith('image/')) {
         mediaHtml = `<img src="${item.fileUrl}" alt="${item.title}" loading="lazy">`;
     } else if (item.fileType && item.fileType.startsWith('video/')) {
-        mediaHtml = `<video controls><source src="${item.fileUrl}" type="${item.fileType}"></video>`;
+        mediaHtml = `<video controls preload="metadata"><source src="${item.fileUrl}" type="${item.fileType}"></video>`;
     } else if (item.fileType && item.fileType.startsWith('audio/')) {
-        mediaHtml = `<audio controls><source src="${item.fileUrl}" type="${item.fileType}"></audio>`;
+        mediaHtml = `<audio controls preload="metadata"><source src="${item.fileUrl}" type="${item.fileType}"></audio>`;
     } else {
         mediaHtml = `<div style="height:180px; display:flex; align-items:center; justify-content:center; background:#333;">📁 ${item.fileName || '文件'}</div>`;
     }
@@ -311,11 +364,60 @@ function createCard(item, itemId) {
         </div>
     </div>`;
 }
+
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
+
+// 全屏预览
+const lightbox = document.getElementById('lightbox');
+const lightboxContent = document.getElementById('lightboxContent');
+document.getElementById('closeLightbox').addEventListener('click', () => {
+    lightbox.classList.remove('active');
+    lightboxContent.innerHTML = '';
+});
+lightbox.addEventListener('click', (e) => {
+    if (e.target === lightbox) {
+        lightbox.classList.remove('active');
+        lightboxContent.innerHTML = '';
+    }
+});
+
+function openLightbox(item) {
+    lightboxContent.innerHTML = '';
+    if (item.fileType && item.fileType.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = item.fileUrl;
+        img.alt = item.title;
+        lightboxContent.appendChild(img);
+    } else if (item.fileType && item.fileType.startsWith('video/')) {
+        const video = document.createElement('video');
+        video.controls = true;
+        video.style.maxWidth = '90%';
+        video.style.maxHeight = '80%';
+        const source = document.createElement('source');
+        source.src = item.fileUrl;
+        source.type = item.fileType;
+        video.appendChild(source);
+        lightboxContent.appendChild(video);
+    } else if (item.fileType && item.fileType.startsWith('audio/')) {
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.style.width = '80%';
+        const source = document.createElement('source');
+        source.src = item.fileUrl;
+        source.type = item.fileType;
+        audio.appendChild(source);
+        lightboxContent.appendChild(audio);
+    } else {
+        window.open(item.fileUrl, '_blank');
+        return;
+    }
+    lightbox.classList.add('active');
+}
+
 // 评论功能
 function loadCommentsForItem(itemId) {
     const listDiv = document.getElementById('comments-list-' + itemId);
@@ -334,7 +436,7 @@ function loadCommentsForItem(itemId) {
         }
         listDiv.innerHTML = html || '<div style="color:#aaa;">暂无评论</div>';
     });
-    // 绑定提交按钮事件（只绑定一次）
+
     const submitBtn = document.getElementById('comment-submit-' + itemId);
     if (submitBtn) {
         submitBtn.onclick = function() {
@@ -357,12 +459,12 @@ function loadCommentsForItem(itemId) {
             }).catch(err => alert('评论失败: ' + err.message));
         };
     }
-    // 更新登录提示显示状态
     const hint = document.getElementById('comment-login-hint-' + itemId);
     if (hint) {
         hint.style.display = currentUser ? 'none' : 'block';
     }
 }
+
 // Cloudinary 上传窗口
 function openCloudinaryWidget(callback) {
     cloudinary.openUploadWidget({
@@ -384,6 +486,7 @@ function openCloudinaryWidget(callback) {
         }
     });
 }
+
 // 管理员上传
 document.getElementById('adminUploadBtn').addEventListener('click', () => {
     if (!isAdmin) return alert('仅管理员可操作');
@@ -404,9 +507,42 @@ document.getElementById('adminUploadBtn').addEventListener('click', () => {
             document.getElementById('uploadTitle').value = '';
             document.getElementById('uploadDesc').value = '';
             loadPublicItems();
+            if (isAdmin) loadPublishedItems();
         }).catch(err => alert('保存失败: ' + err.message));
     });
 });
+
+// 已发布作品管理
+function loadPublishedItems() {
+    const container = document.getElementById('publishedItemsList');
+    container.innerHTML = '加载中...';
+    db.ref('items').once('value').then(snap => {
+        const items = snap.val() || {};
+        let html = '';
+        for (let id in items) {
+            const item = items[id];
+            html += `<div>
+                <span>${escapeHtml(item.title)} (${item.category})</span>
+                <button onclick="deleteItem('${id}')" style="background:#e74c3c; padding:5px 15px;">🗑️ 下架</button>
+            </div>`;
+        }
+        container.innerHTML = html || '暂无作品';
+    });
+}
+
+async function deleteItem(itemId) {
+    if (!isAdmin) return;
+    if (!confirm('确定下架这个作品吗？此操作不可恢复。')) return;
+    try {
+        await db.ref('items/' + itemId).remove();
+        alert('作品已下架');
+        loadPublicItems();
+        loadPublishedItems();
+    } catch (e) {
+        alert('删除失败: ' + e.message);
+    }
+}
+
 // 访客投稿
 document.getElementById('submitBtn').addEventListener('click', () => {
     if (!currentUser) {
@@ -417,7 +553,7 @@ document.getElementById('submitBtn').addEventListener('click', () => {
     const title = prompt('作品标题');
     if (!title) return;
     const desc = prompt('简短描述（可选）') || '';
-    const cat = prompt('分类（photo/illustration/music/program/model/game/other）') || 'other';
+    const cat = prompt('分类（photo/illustration/music/video/program/model/game/other）') || 'other';
     openCloudinaryWidget((fileInfo) => {
         const submission = {
             uid: currentUser.uid,
@@ -434,6 +570,7 @@ document.getElementById('submitBtn').addEventListener('click', () => {
         }).catch(err => alert('提交失败: ' + err.message));
     });
 });
+
 // 待审核加载
 function loadPendingSubmissions() {
     if (!isAdmin) return;
@@ -456,6 +593,7 @@ function loadPendingSubmissions() {
         document.getElementById('pendingSubmissions').innerHTML = html || '暂无待审核';
     });
 }
+
 async function approve(uid, subId) {
     try {
         const subSnap = await db.ref('submissions/' + uid + '/' + subId).once('value');
@@ -470,16 +608,20 @@ async function approve(uid, subId) {
         alert('已通过并发布');
         loadPendingSubmissions();
         loadPublicItems();
+        loadPublishedItems();
     } catch (e) { alert('操作失败: ' + e.message); }
 }
+
 async function reject(uid, subId) {
     if (confirm('确定拒绝？')) {
         await db.ref('submissions/' + uid + '/' + subId + '/status').set('rejected');
         loadPendingSubmissions();
     }
 }
+
 // ==================== 抽奖功能 ====================
 let lotteryPrizes = [];
+
 function initLottery() {
     db.ref('lottery/prizes').once('value').then(snap => {
         lotteryPrizes = snap.val() || [];
@@ -487,6 +629,7 @@ function initLottery() {
         document.getElementById('prizeCount').textContent = lotteryPrizes.length;
     });
 }
+
 function renderPrizeList() {
     const container = document.getElementById('prizeListContainer');
     if (!isAdmin) {
@@ -506,6 +649,7 @@ function renderPrizeList() {
     });
     html += '</ul>';
     container.innerHTML = html;
+
     container.querySelectorAll('.delete-prize-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const idx = e.target.getAttribute('data-index');
@@ -516,12 +660,14 @@ function renderPrizeList() {
         });
     });
 }
+
 function saveLotteryToDB() {
     db.ref('lottery/prizes').set(lotteryPrizes).then(() => {
         renderPrizeList();
         document.getElementById('prizeCount').textContent = lotteryPrizes.length;
     }).catch(err => alert('保存失败: ' + err.message));
 }
+
 document.getElementById('addPrizeBtn').addEventListener('click', () => {
     if (!isAdmin) return;
     const nameInput = document.getElementById('newPrizeName');
@@ -531,6 +677,7 @@ document.getElementById('addPrizeBtn').addEventListener('click', () => {
     nameInput.value = '';
     saveLotteryToDB();
 });
+
 document.getElementById('drawBtn').addEventListener('click', () => {
     if (lotteryPrizes.length === 0) {
         document.getElementById('drawResult').innerHTML = '⚠️ 奖品池为空';
@@ -540,11 +687,13 @@ document.getElementById('drawBtn').addEventListener('click', () => {
     const winner = lotteryPrizes[randomIndex];
     document.getElementById('drawResult').innerHTML = `🏆 ${escapeHtml(winner)} 🏆`;
 });
+
 document.getElementById('exportLotteryBtn').addEventListener('click', () => {
     if (!isAdmin) return;
     const code = btoa(unescape(encodeURIComponent(JSON.stringify(lotteryPrizes))));
     prompt('请复制以下备份码（可在其他设备导入）', code);
 });
+
 document.getElementById('importLotteryBtn').addEventListener('click', () => {
     if (!isAdmin) return;
     const code = prompt('请粘贴备份码');
@@ -562,6 +711,7 @@ document.getElementById('importLotteryBtn').addEventListener('click', () => {
         alert('备份码无效，请检查是否完整复制');
     }
 });
+
 // 初始化
 loadPublicItems();
 </script>
